@@ -1,5 +1,7 @@
-streamlit
+dash
+pandas
+plotly
 ccxt
 requests
-pandas
 pytz
+gunicorn
