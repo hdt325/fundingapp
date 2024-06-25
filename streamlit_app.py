@@ -37,7 +37,7 @@ def get_funding_rates():
         return market_info
 
     def fetch_funding_data(market_info):
-        symbols = list(markets_hyperliquid.keys())
+        symbols = list(markets_hyperliquid.keys())[:5]
         progress_text = "Fetching funding rates. Please wait..."
         my_bar = st.progress(0, text=progress_text)
         total_symbols = len(symbols)
