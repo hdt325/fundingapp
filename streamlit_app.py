@@ -125,7 +125,7 @@ def main():
     if 'data' not in st.session_state:
         st.session_state.data = None
         st.session_state.last_refresh = datetime.now()
-        st.session_state.num_pairs = 15  # Default to 5 pairs
+        st.session_state.num_pairs = 5  # Default to 5 pairs
     
     # Create two columns for input and refresh button
     col1, col2, col3 = st.columns([1, 2, 1], vertical_alignment='bottom')
@@ -134,6 +134,7 @@ def main():
         if st.button('Refresh Data'):
             st.session_state.data = None  # Reset the data to trigger a refresh
             st.session_state.last_refresh = datetime.now()
+
     with col3:
         # Add number input for selecting number of pairs
         num_pairs = st.number_input("Num of pairs to display (0 = all)", help="Number of Hyperliquid pairs to display (0 = all)",
@@ -154,7 +155,17 @@ def main():
 
     # Display the data
     st.write(f"Hyperliquid Data -- will update every 15 mins. Last updated: {st.session_state.last_refresh.strftime('%H:%M:%S | %m/%d/%y')} PST")
-    
+    st.markdown(
+    f"""
+    <p style="font-size: 0.8em;">
+    Base funding rate is 0.00125%, and premiums are added/substracted based on oracle price. 
+    Funding is charged/given based on rate at the end of the hour, and rates outside of that timestamp are simply predicted values (not the actual $). 
+    <a href="https://hyperliquid.gitbook.io/hyperliquid-docs/trading/funding" target="_blank">See Hyperliquid Docs</a>
+    </p>
+    """,
+    unsafe_allow_html=True
+    )
+
     # JavaScript function for cell styling
     cell_style_jscode = JsCode("""
     function(params) {
