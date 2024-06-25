@@ -107,45 +107,20 @@ def main():
     funding_data = get_funding_rates()
     funding_df = pd.DataFrame(funding_data, columns=['Symbol', 'Funding Rate', 'Current Funding Time (PST)', 'Max Leverage'])
     
-    # Get mark prices
+    st.write("Funding Rates:")
+    st.dataframe(funding_df)
+
+    # Get and display mark prices
     mark_prices_df = get_mark_prices()
-    
+    st.write("Mark Prices:")
+    st.dataframe(mark_prices_df)
+
     # Merge the two tables
     merged_df = pd.merge(funding_df, mark_prices_df, left_on='Symbol', right_on='Name', how='left')
     merged_df.drop(columns=['Name'], inplace=True)
-    
-    # Create DataTables
-    funding_table = dash_table.DataTable(
-        data=funding_df.to_dict('records'),
-        columns=[{'name': i, 'id': i} for i in funding_df.columns],
-        style_table={'overflowX': 'auto'}
-    )
-    
-    mark_prices_table = dash_table.DataTable(
-        data=mark_prices_df.to_dict('records'),
-        columns=[{'name': i, 'id': i} for i in mark_prices_df.columns],
-        style_table={'overflowX': 'auto'}
-    )
-    
-    merged_table = dash_table.DataTable(
-        data=merged_df.to_dict('records'),
-        columns=[{'name': i, 'id': i} for i in merged_df.columns],
-        style_table={'overflowX': 'auto'}
-    )
-    
-    # Create a bar chart of funding rates
-    fig = px.bar(funding_df, x='Symbol', y='Funding Rate', title='Funding Rates by Symbol')
-    
-    return html.Div([
-        html.H2('Funding Rates'),
-        funding_table
-    ]), html.Div([
-        html.H2('Mark Prices'),
-        mark_prices_table
-    ]), html.Div([
-        html.H2('Merged Data'),
-        merged_table
-    ]), fig
+    st.write("Merged Data:")
+    st.dataframe(merged_df)
 
-if __name__ == '__main__':
-    app.run_server(debug=True)
+if __name__ == "__main__":
+    main()
+
