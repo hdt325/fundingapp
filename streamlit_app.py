@@ -37,7 +37,7 @@ def get_funding_rates():
         return market_info
 
     def fetch_funding_data(market_info):
-        symbols = list(markets_hyperliquid.keys())
+        symbols = list(markets_hyperliquid.keys())[:5] #remove [:5] to get all symbols
         progress_text = "Fetching funding rates. Please wait..."
         my_bar = st.progress(0, text=progress_text)
         total_symbols = len(symbols)
@@ -58,7 +58,7 @@ def get_funding_rates():
                             max_leverage
                         ])
                 my_bar.progress((i + 1) / total_symbols, text=progress_text)
-                time.sleep(.1)
+                time.sleep(0.05)
             except ccxt.RateLimitExceeded:
                 time.sleep(60)
             except Exception as e:
@@ -101,23 +101,23 @@ def get_mark_prices():
     return df_display
 
 def main():
-    st.title("Funding Rates and Mark Prices")
+    st.title("Funding Rate Comparisons")
     
     # Get and display funding rates
     funding_data = get_funding_rates()
     funding_df = pd.DataFrame(funding_data, columns=['Symbol', 'Funding Rate', 'Current Funding Time (PST)', 'Max Leverage'])
-    st.write("Funding Rates:")
-    st.dataframe(funding_df)
+    #st.write("Funding Rates:")
+    #st.dataframe(funding_df)
 
     # Get and display mark prices
     mark_prices_df = get_mark_prices()
-    st.write("Mark Prices:")
-    st.dataframe(mark_prices_df)
+    #st.write("Mark Prices:")
+    #st.dataframe(mark_prices_df)
 
     # Merge the two tables
     merged_df = pd.merge(funding_df, mark_prices_df, left_on='Symbol', right_on='Name', how='left')
     merged_df.drop(columns=['Name'], inplace=True)
-    st.write("Merged Data:")
+    st.write("Hyperliquid:")
     st.dataframe(merged_df)
 
 if __name__ == "__main__":
