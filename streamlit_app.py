@@ -38,7 +38,7 @@ def get_funding_rates():
 
     def fetch_funding_data(market_info):
         symbols = list(markets_hyperliquid.keys())[:5] #remove [:5] to get all symbols
-        progress_text = "Fetching funding rates. Please wait..."
+        progress_text = "Loading in Progress"
         my_bar = st.progress(0, text=progress_text)
         total_symbols = len(symbols)
         for i, symbol in enumerate(symbols):
@@ -63,6 +63,7 @@ def get_funding_rates():
                 time.sleep(60)
             except Exception as e:
                 st.error(f"Error fetching funding rate for {symbol}: {str(e)}")
+        my_bar.empty()
         return funding_data
 
     data_meta = fetch_meta_data()
@@ -102,7 +103,6 @@ def get_mark_prices():
 
 def main():
     st.title("Funding Rate Comparisons")
-    
     # Get and display funding rates
     funding_data = get_funding_rates()
     funding_df = pd.DataFrame(funding_data, columns=['Symbol', 'Funding Rate', 'Current Funding Time (PST)', 'Max Leverage'])
