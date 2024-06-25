@@ -2,6 +2,7 @@ import streamlit as st
 from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
 from st_aggrid.shared import GridUpdateMode
 from datetime import datetime, timedelta
+import pytz
 
 # Import functions from the separate files
 from hyperliquid import load_hyperliquid_data
@@ -49,9 +50,13 @@ def main():
             st.session_state.hyperliquid_data = load_hyperliquid_data(0 if num_pairs == 0 else num_pairs)
             st.session_state.apex_data = get_apex_funding_rates()
 
+    # Convert last_refresh to PST
+    pst = pytz.timezone('US/Pacific')
+    last_refresh_pst = st.session_state.last_refresh.astimezone(pst)
+
     # Display the data
-    st.write(f"Data will update every 15 mins. Last updated: {st.session_state.last_refresh.strftime('%H:%M:%S | %m/%d/%y')} PST")
-    
+    st.write(f"Data will update every 15 mins. Last updated: {last_refresh_pst.strftime('%H:%M:%S | %m/%d/%y')} PST")
+   
     st.markdown(
         f"""
         <p style="font-size: 0.8em;">

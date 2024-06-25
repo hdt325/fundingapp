@@ -72,7 +72,7 @@ def get_apex_funding_rates():
             data.append({
                 'Symbol': symbol,
                 'Funding Rate': f"{float(funding_rate) * 100:.6f}%" if funding_rate else 'N/A',
-                'Funding Time (PST)': current_funding_time_pst.strftime('%H:%M | %m-%d-%y') if current_funding_time_pst else 'N/A',
+                'Funding Time (PST)': current_funding_time_pst.strftime('%H:%M | %m/%d/%y') if current_funding_time_pst else 'N/A',
                 'Max Leverage': max_leverage,
                 'Last Price': last_price,
                 'Time Retrieved (PST)': current_time_pdt
