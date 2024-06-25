@@ -106,6 +106,7 @@ def main():
     # Get and display funding rates
     funding_data = get_funding_rates()
     funding_df = pd.DataFrame(funding_data, columns=['Symbol', 'Funding Rate', 'Current Funding Time (PST)', 'Max Leverage'])
+    
     st.write("Funding Rates:")
     st.dataframe(funding_df)
 
@@ -122,3 +123,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
