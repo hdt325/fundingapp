@@ -1,12 +1,16 @@
 import ccxt
 import requests
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 from pytz import timezone
 import time
 import streamlit as st
+from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
+from st_aggrid.shared import GridUpdateMode
 
-def get_funding_rates():
+st.set_page_config(page_title="Funding App", page_icon=":rocket:", layout="wide", initial_sidebar_state="expanded")
+
+def get_funding_rates(num_pairs=None):
     hyperliquid = ccxt.hyperliquid({'enableRateLimit': True, 'rateLimit': 1000})
     markets_hyperliquid = hyperliquid.load_markets()
     funding_data = []
@@ -17,10 +21,11 @@ def get_funding_rates():
         dt = datetime.strptime(dt_str, "%Y-%m-%dT%H:%M:%S.%fZ")
         pst = timezone('US/Pacific')
         dt_pst = dt.replace(tzinfo=timezone('UTC')).astimezone(pst)
-        return dt_pst.strftime("%Y-%m-%d %H:%M:%S %Z")
+        return dt_pst.strftime("%H:%M | %m/%d/%y")
 
     def format_funding_rate(rate):
-        return f"{rate:.8f}"
+        percentage = rate * 100
+        return f"{percentage:.6f}%"
 
     def fetch_meta_data():
         url = "https://api.hyperliquid.xyz/info"
@@ -37,8 +42,10 @@ def get_funding_rates():
         return market_info
 
     def fetch_funding_data(market_info):
-        symbols = list(markets_hyperliquid.keys())[:5] #remove [:5] to get all symbols
-        progress_text = "Loading in Progress"
+        symbols = list(markets_hyperliquid.keys())
+        if num_pairs:
+            symbols = symbols[:num_pairs]
+        progress_text = "Loading Hyperliquid Data"
         my_bar = st.progress(0, text=progress_text)
         total_symbols = len(symbols)
         for i, symbol in enumerate(symbols):
@@ -83,7 +90,7 @@ def get_mark_prices():
     asset_contexts = data[1]
 
     pdt = timezone('America/Los_Angeles')
-    current_time_pdt = datetime.now(pdt).strftime('%Y-%m-%d %H:%M:%S %Z')
+    current_time_pdt = datetime.now(pdt).strftime('%H:%M:%S | %m/%d/%y')
 
     all_assets = []
     for i, asset in enumerate(universe):
@@ -95,31 +102,96 @@ def get_mark_prices():
         all_assets.append({
             'Name': asset_name,
             'Mark Price': mark_price,
-            'Time Retrieved (PDT)': current_time_pdt
+            'Time Retrieved (PST)': current_time_pdt
         })
 
     df_display = pd.DataFrame(all_assets)
     return df_display
 
-def main():
-    st.title("Funding Rate Comparisons")
-    # Get and display funding rates
-    funding_data = get_funding_rates()
-    funding_df = pd.DataFrame(funding_data, columns=['Symbol', 'Funding Rate', 'Current Funding Time (PST)', 'Max Leverage'])
-    #st.write("Funding Rates:")
-    #st.dataframe(funding_df)
-
-    # Get and display mark prices
+def load_data(num_pairs):
+    funding_data = get_funding_rates(num_pairs)
+    funding_df = pd.DataFrame(funding_data, columns=['Symbol', 'Funding Rate', 'Funding Time (PST)', 'Max Leverage'])
     mark_prices_df = get_mark_prices()
-    #st.write("Mark Prices:")
-    #st.dataframe(mark_prices_df)
-
-    # Merge the two tables
     merged_df = pd.merge(funding_df, mark_prices_df, left_on='Symbol', right_on='Name', how='left')
     merged_df.drop(columns=['Name'], inplace=True)
-    st.write("Hyperliquid:")
-    st.dataframe(merged_df)
+    return merged_df
+
+def main():
+    st.title("Funding Rate Comparisons")
+    st.write("Recall: funding rate = what the longs pay the shorts :sunglasses:")
+    st.divider()
+
+    # Initialize session state
+    if 'data' not in st.session_state:
+        st.session_state.data = None
+        st.session_state.last_refresh = datetime.now()
+        st.session_state.num_pairs = 15  # Default to 5 pairs
+    
+    # Create two columns for input and refresh button
+    col1, col2, col3 = st.columns([1, 2, 1], vertical_alignment='bottom')
+    with col1:
+        # Create a refresh button
+        if st.button('Refresh Data'):
+            st.session_state.data = None  # Reset the data to trigger a refresh
+            st.session_state.last_refresh = datetime.now()
+    with col3:
+        # Add number input for selecting number of pairs
+        num_pairs = st.number_input("Num of pairs to display (0 = all)", help="Number of Hyperliquid pairs to display (0 = all)",
+                                    min_value=0, label_visibility='visible',
+                                    value=st.session_state.num_pairs)
+        st.session_state.num_pairs = num_pairs
+
+    # Auto-refresh every 15 minutes
+    if datetime.now() - st.session_state.last_refresh > timedelta(minutes=15):
+        st.session_state.data = None  # Reset the data to trigger a refresh
+        st.session_state.last_refresh = datetime.now()
+        st.experimental_rerun()
+
+    # Load or reload data
+    if st.session_state.data is None:
+        with st.spinner('Loading data...'):
+            st.session_state.data = load_data(0 if num_pairs == 0 else num_pairs)
+
+    # Display the data
+    st.write(f"Hyperliquid Data -- will update every 15 mins. Last updated: {st.session_state.last_refresh.strftime('%H:%M:%S | %m/%d/%y')} PST")
+    
+    # JavaScript function for cell styling
+    cell_style_jscode = JsCode("""
+    function(params) {
+        if (params.value) {
+            var rate = parseFloat(params.value.replace('%', ''));
+            if (rate > 0.00125) {
+                return {'color': 'green'};
+            } else if (rate < 0) {
+                return {'color': '#FF6666'};
+            } else {
+                return {'color': 'grey'};
+            }
+        }
+        return null;
+    }
+    """)
+
+    # Configure AgGrid
+    gb = GridOptionsBuilder.from_dataframe(st.session_state.data)
+    gb.configure_default_column(enablePivot=True, enableValue=True, enableRowGroup=True)
+    gb.configure_selection(selection_mode="single", use_checkbox=False)
+    gb.configure_column("Funding Rate", cellStyle=cell_style_jscode)
+    gb.configure_grid_options(domLayout='normal')
+    gridOptions = gb.build()
+
+    # Display the AgGrid
+    grid_response = AgGrid(
+        st.session_state.data,
+        gridOptions=gridOptions,
+        height=500,
+        width='100%',
+        data_return_mode='AS_INPUT', 
+        update_mode=GridUpdateMode.MODEL_CHANGED,
+        fit_columns_on_grid_load=True,
+        allow_unsafe_jscode=True,
+        enable_enterprise_modules=False,
+    )
 
 if __name__ == "__main__":
     main()
-
